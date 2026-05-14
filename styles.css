@@ -34,7 +34,7 @@ label, .fingerprint span {
   font-weight: 650;
 }
 
-textarea, input[type="file"] {
+textarea {
   width: 100%;
   box-sizing: border-box;
 }
@@ -47,7 +47,7 @@ textarea {
   font: inherit;
 }
 
-button, .fileLabel {
+button {
   display: inline-block;
   margin-top: .75rem;
   border: 0;
@@ -59,12 +59,8 @@ button, .fileLabel {
   cursor: pointer;
 }
 
-button:hover, .fileLabel:hover {
+button:hover {
   background: #374151;
-}
-
-input[type="file"] {
-  margin-top: .3rem;
 }
 
 pre {
@@ -88,10 +84,6 @@ pre {
   font-size: .9rem;
 }
 
-.warning {
-  color: #92400e;
-}
-
 .error {
   color: #b91c1c;
 }
@@ -108,16 +100,6 @@ pre {
   line-height: 1.6;
 }
 
-.or {
-  margin: .75rem 0 0;
-  color: #6b7280;
-}
-
-#decryptedFile a {
-  display: inline-block;
-  margin-top: .5rem;
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     background: #030712;
@@ -130,12 +112,12 @@ pre {
     color: #f9fafb;
   }
 
-  button, .fileLabel {
+  button {
     background: #f9fafb;
     color: #111827;
   }
 
-  button:hover, .fileLabel:hover {
+  button:hover {
     background: #d1d5db;
   }
 }

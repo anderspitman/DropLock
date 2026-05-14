@@ -1,5 +1,4 @@
 const KEY_STORE = "secret-share-ecdh-v1";
-const WARN_FILE_BYTES = 60 * 1024;
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const $ = (id) => document.getElementById(id);
@@ -131,29 +130,9 @@ async function copyText(text) {
   }
 }
 
-function readFileAsBytes(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(new Uint8Array(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-async function selectedPayload() {
-  const file = $("secretFile").files[0];
-  if (file) {
-    const bytes = await readFileAsBytes(file);
-    return {
-      kind: "file",
-      name: file.name || "secret-file",
-      mime: file.type || "application/octet-stream",
-      data: bytesToBase64Url(bytes)
-    };
-  }
-
+function selectedPayload() {
   const text = $("secretText").value;
-  if (!text) throw new Error("Type text or choose a file first.");
+  if (!text) throw new Error("Type text first.");
   return { kind: "text", text };
 }
 
@@ -209,17 +188,6 @@ async function setupCompose(recipientB64) {
   await importPublicKey(recipientRaw);
   $("recipientFingerprint").textContent = await emojiFingerprint(recipientRaw);
 
-  $("secretFile").onchange = () => {
-    const file = $("secretFile").files[0];
-    const warning = $("fileWarning");
-    if (file && file.size > WARN_FILE_BYTES) {
-      warning.textContent = "This will create a very long URL. Many apps and browsers reject URLs over roughly 100 KB.";
-      show(warning);
-    } else {
-      show(warning, false);
-    }
-  };
-
   $("generateLink").onclick = async () => {
     try {
       setStatus("Encrypting...");
@@ -251,19 +219,7 @@ async function setupDecrypt(recipientB64, dataB64) {
       return;
     }
 
-    if (payload.kind === "file") {
-      const blob = new Blob([base64UrlToBytes(payload.data)], { type: payload.mime });
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = payload.name || "secret-file";
-      link.textContent = `Download ${link.download}`;
-      $("decryptedFile").replaceChildren(link);
-      show($("decryptedFile"));
-      return;
-    }
-
-    throw new Error("Unknown decrypted data type.");
+    throw new Error("Only text payloads are supported by this version.");
   } catch (err) {
     show($("decrypting"), false);
     $("decryptError").textContent = err.message || "Decryption failed.";
