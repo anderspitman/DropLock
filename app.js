@@ -1,4 +1,7 @@
-const KEY_STORE = "secret-share-ecdh-v1";
+const LEGACY_KEY_STORE = "secret-share-ecdh-v1";
+const DB_NAME = "secret-share-keys-v3";
+const DB_STORE = "keys";
+const DB_KEY = "identity";
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const $ = (id) => document.getElementById(id);
@@ -60,30 +63,58 @@ function concatBytes(...parts) {
   return out;
 }
 
-async function getOwnKeys() {
-  const saved = localStorage.getItem(KEY_STORE);
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    return {
-      privateKey: await crypto.subtle.importKey(
-        "jwk",
-        parsed.privateJwk,
-        { name: "ECDH", namedCurve: "P-256" },
-        false,
-        ["deriveBits"]
-      ),
-      publicB64: parsed.publicB64
-    };
+function openKeyDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(DB_STORE, { keyPath: "id" });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function loadStoredIdentity() {
+  const db = await openKeyDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction(DB_STORE, "readonly").objectStore(DB_STORE).get(DB_KEY);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    db.close();
   }
+}
+
+async function saveStoredIdentity(privateKey, publicB64) {
+  const db = await openKeyDb();
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(DB_STORE, "readwrite");
+      tx.objectStore(DB_STORE).put({ id: DB_KEY, privateKey, publicB64 });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function getOwnKeys() {
+  const saved = await loadStoredIdentity();
+  if (saved?.privateKey && saved?.publicB64) {
+    return { privateKey: saved.privateKey, publicB64: saved.publicB64 };
+  }
+
+  localStorage.removeItem(LEGACY_KEY_STORE);
 
   const pair = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
-    true,
+    false,
     ["deriveBits"]
   );
-  const privateJwk = await crypto.subtle.exportKey("jwk", pair.privateKey);
   const publicB64 = bufferToBase64Url(await crypto.subtle.exportKey("raw", pair.publicKey));
-  localStorage.setItem(KEY_STORE, JSON.stringify({ privateJwk, publicB64 }));
+  await saveStoredIdentity(pair.privateKey, publicB64);
   return { privateKey: pair.privateKey, publicB64 };
 }
 
@@ -141,7 +172,7 @@ async function encryptForRecipient(recipientB64, payload) {
   const recipientPublic = await importPublicKey(recipientRaw);
   const ephemeral = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
-    true,
+    false,
     ["deriveBits"]
   );
   const ephemeralRaw = new Uint8Array(await crypto.subtle.exportKey("raw", ephemeral.publicKey));
@@ -230,6 +261,10 @@ async function setupDecrypt(recipientB64, dataB64) {
 async function init() {
   if (!crypto.subtle) {
     setStatus("WebCrypto is unavailable. Use HTTPS or localhost.", true);
+    return;
+  }
+  if (!("indexedDB" in window)) {
+    setStatus("IndexedDB is unavailable, so this browser cannot save non-extractable keys.", true);
     return;
   }
 
