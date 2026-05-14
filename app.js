@@ -146,10 +146,14 @@ async function emojiFingerprint(rawBytes) {
 
 function appUrl(params) {
   const url = new URL(location.href);
-  url.hash = "";
   url.search = "";
-  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  url.hash = new URLSearchParams(params).toString();
   return url.toString();
+}
+
+function appParams() {
+  const fragment = location.hash.startsWith("#") ? location.hash.slice(1) : location.hash;
+  return new URLSearchParams(fragment);
 }
 
 async function copyText(text) {
@@ -274,7 +278,7 @@ async function init() {
   $("myFingerprint").textContent = await emojiFingerprint(ownRaw);
   setupIdentity();
 
-  const params = new URLSearchParams(location.search);
+  const params = appParams();
   const recipientB64 = params.get("k");
   const dataB64 = params.get("d");
 
