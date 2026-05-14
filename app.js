@@ -1,5 +1,4 @@
-const LEGACY_KEY_STORE = "secret-share-ecdh-v1";
-const DB_NAME = "secret-share-keys-v3";
+const DB_NAME = "secret-share-keys";
 const DB_STORE = "keys";
 const DB_KEY = "identity";
 const enc = new TextEncoder();
@@ -106,8 +105,6 @@ async function getOwnKeys() {
     return { privateKey: saved.privateKey, publicB64: saved.publicB64 };
   }
 
-  localStorage.removeItem(LEGACY_KEY_STORE);
-
   const pair = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
     false,
@@ -140,7 +137,7 @@ async function deriveAesKey(privateKey, publicKey, ephemeralRaw, recipientRaw) {
       name: "HKDF",
       hash: "SHA-256",
       salt: concatBytes(ephemeralRaw, recipientRaw),
-      info: enc.encode("secret-share-v1 aes-gcm")
+      info: enc.encode("secret-share aes-gcm")
     },
     hkdfKey,
     { name: "AES-GCM", length: 256 },
@@ -198,7 +195,6 @@ async function encryptForRecipient(recipientB64, payload) {
     enc.encode(JSON.stringify(payload))
   );
   return utf8ToBase64Url(JSON.stringify({
-    v: 1,
     e: bytesToBase64Url(ephemeralRaw),
     i: bytesToBase64Url(iv),
     c: bufferToBase64Url(ciphertext)
@@ -207,7 +203,6 @@ async function encryptForRecipient(recipientB64, payload) {
 
 async function decryptPayload(recipientB64, dataB64) {
   const box = JSON.parse(base64UrlToUtf8(dataB64));
-  if (box.v !== 1) throw new Error("Unsupported encrypted data version.");
 
   const recipientRaw = base64UrlToBytes(recipientB64);
   const ephemeralRaw = base64UrlToBytes(box.e);
@@ -264,7 +259,7 @@ async function setupDecrypt(recipientB64, dataB64) {
       return;
     }
 
-    throw new Error("Only text payloads are supported by this version.");
+    throw new Error("Only text payloads are supported.");
   } catch (err) {
     show($("decrypting"), false);
     $("decryptError").textContent = err.message || "Decryption failed.";

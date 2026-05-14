@@ -1,4 +1,4 @@
-const CACHE = "secret-share-v3";
+const CACHE = "secret-share";
 const ASSETS = ["./", "index.html", "styles.css", "app.js", "manifest.webmanifest", "icon.svg"];
 
 self.addEventListener("install", (event) => {
