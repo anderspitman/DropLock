@@ -129,14 +129,24 @@ async function importPublicKey(rawBytes) {
 }
 
 async function deriveAesKey(privateKey, publicKey, ephemeralRaw, recipientRaw) {
-  const shared = new Uint8Array(await crypto.subtle.deriveBits(
+  const shared = await crypto.subtle.deriveBits(
     { name: "ECDH", public: publicKey },
     privateKey,
     256
-  ));
-  const material = concatBytes(enc.encode("secret-share-v1"), shared, ephemeralRaw, recipientRaw);
-  const keyBytes = await crypto.subtle.digest("SHA-256", material);
-  return crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["encrypt", "decrypt"]);
+  );
+  const hkdfKey = await crypto.subtle.importKey("raw", shared, "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: concatBytes(ephemeralRaw, recipientRaw),
+      info: enc.encode("secret-share-v1 aes-gcm")
+    },
+    hkdfKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
 }
 
 async function emojiFingerprint(rawBytes) {
