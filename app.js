@@ -296,8 +296,4 @@ async function init() {
   }
 }
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
-}
-
 init().catch((err) => setStatus(err.message || "Something went wrong.", true));
