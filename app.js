@@ -148,7 +148,7 @@ async function deriveAesKey(privateKey, publicKey, ephemeralRaw, recipientRaw) {
 
 async function emojiFingerprint(rawBytes) {
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", rawBytes));
-  return Array.from(hash.slice(0, 6), (byte) => EMOJI[byte % EMOJI.length]).join(" ");
+  return Array.from(hash.slice(0, 8), (byte) => EMOJI[byte % EMOJI.length]).join(" ");
 }
 
 function appUrl(params) {
