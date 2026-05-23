@@ -13,7 +13,7 @@ the secret.
 When the app launches, it should generate a non-extractable key pair if one
 doesn't already exist in IndexedDB.
 
-To protect against an attacker swapping in their own public key, an 8 emoji
+To protect against an attacker swapping in their own public key, a 16 emoji
 fingerprint should also be displayed, so the receiver can communicate it over
 a second channel.
 
