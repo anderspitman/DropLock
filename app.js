@@ -1,6 +1,14 @@
 const DB_NAME = "droplock-keys";
 const DB_STORE = "keys";
 const DB_KEY = "identity";
+const MAGIC = new Uint8Array([0x44, 0x4c, 0x43, 0x4b]); // DLCK
+const FORMAT_VERSION = 1;
+const PUBLIC_KEY_BYTES = 65;
+const IV_BYTES = 12;
+const HEADER_BYTES = MAGIC.length + 1 + PUBLIC_KEY_BYTES + PUBLIC_KEY_BYTES + IV_BYTES;
+const PAYLOAD_TEXT = 1;
+const PAYLOAD_FILE = 2;
+const MAX_URL_CHARS = 60000;
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const $ = (id) => document.getElementById(id);
@@ -13,6 +21,8 @@ const EMOJI = [
 
 let ownKeys;
 let ownPublicB64;
+let encryptedDownloadUrl;
+let decryptedDownloadUrl;
 
 function show(el, visible = true) {
   el.classList.toggle("hidden", !visible);
@@ -43,14 +53,6 @@ function base64UrlToBytes(value) {
   return bytes;
 }
 
-function utf8ToBase64Url(value) {
-  return bytesToBase64Url(enc.encode(value));
-}
-
-function base64UrlToUtf8(value) {
-  return dec.decode(base64UrlToBytes(value));
-}
-
 function concatBytes(...parts) {
   const length = parts.reduce((sum, part) => sum + part.length, 0);
   const out = new Uint8Array(length);
@@ -60,6 +62,19 @@ function concatBytes(...parts) {
     offset += part.length;
   }
   return out;
+}
+
+function equalBytes(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+function assertPublicKeyBytes(rawBytes) {
+  if (rawBytes.length !== PUBLIC_KEY_BYTES || rawBytes[0] !== 0x04) {
+    throw new Error("Invalid public key.");
+  }
 }
 
 function openKeyDb() {
@@ -116,6 +131,7 @@ async function getOwnKeys() {
 }
 
 async function importPublicKey(rawBytes) {
+  assertPublicKeyBytes(rawBytes);
   return crypto.subtle.importKey(
     "raw",
     rawBytes,
@@ -172,10 +188,98 @@ async function copyText(text) {
   }
 }
 
-function selectedPayload() {
+async function readFileAsBytes(file) {
+  return new Uint8Array(await file.arrayBuffer());
+}
+
+async function selectedPayload() {
+  const file = $("secretFile").files[0];
+  if (file) {
+    return {
+      type: PAYLOAD_FILE,
+      name: file.name || "file",
+      mime: file.type || "application/octet-stream",
+      data: await readFileAsBytes(file)
+    };
+  }
+
   const text = $("secretText").value;
-  if (!text) throw new Error("Type text first.");
-  return { kind: "text", text };
+  if (!text) throw new Error("Type text or choose a file first.");
+  return { type: PAYLOAD_TEXT, name: "", mime: "text/plain;charset=utf-8", data: enc.encode(text) };
+}
+
+function encodePayload(payload) {
+  const name = enc.encode(payload.name || "");
+  const mime = enc.encode(payload.mime || "");
+  if (name.length > 65535 || mime.length > 65535) {
+    throw new Error("File metadata is too long.");
+  }
+  return concatBytes(
+    Uint8Array.of(payload.type, name.length >> 8, name.length & 255, mime.length >> 8, mime.length & 255),
+    name,
+    mime,
+    payload.data
+  );
+}
+
+function decodePayload(bytes) {
+  if (bytes.length < 5) throw new Error("Invalid plaintext payload.");
+  const type = bytes[0];
+  const nameLen = (bytes[1] << 8) | bytes[2];
+  const mimeLen = (bytes[3] << 8) | bytes[4];
+  const nameStart = 5;
+  const mimeStart = nameStart + nameLen;
+  const dataStart = mimeStart + mimeLen;
+  if (dataStart > bytes.length) throw new Error("Invalid plaintext payload.");
+  if (type !== PAYLOAD_TEXT && type !== PAYLOAD_FILE) throw new Error("Unsupported payload type.");
+
+  return {
+    type,
+    name: dec.decode(bytes.slice(nameStart, mimeStart)),
+    mime: dec.decode(bytes.slice(mimeStart, dataStart)),
+    data: bytes.slice(dataStart)
+  };
+}
+
+function buildHeader(recipientRaw, ephemeralRaw, iv) {
+  assertPublicKeyBytes(recipientRaw);
+  assertPublicKeyBytes(ephemeralRaw);
+  const header = new Uint8Array(HEADER_BYTES);
+  let offset = 0;
+  header.set(MAGIC, offset);
+  offset += MAGIC.length;
+  header[offset++] = FORMAT_VERSION;
+  header.set(recipientRaw, offset);
+  offset += PUBLIC_KEY_BYTES;
+  header.set(ephemeralRaw, offset);
+  offset += PUBLIC_KEY_BYTES;
+  header.set(iv, offset);
+  return header;
+}
+
+function parseMessage(message) {
+  if (message.length < HEADER_BYTES + 16) throw new Error("Invalid encrypted message.");
+  for (let i = 0; i < MAGIC.length; i++) {
+    if (message[i] !== MAGIC[i]) throw new Error("Invalid encrypted message.");
+  }
+  if (message[MAGIC.length] !== FORMAT_VERSION) throw new Error("Unsupported message format.");
+
+  let offset = MAGIC.length + 1;
+  const recipientRaw = message.slice(offset, offset + PUBLIC_KEY_BYTES);
+  offset += PUBLIC_KEY_BYTES;
+  const ephemeralRaw = message.slice(offset, offset + PUBLIC_KEY_BYTES);
+  offset += PUBLIC_KEY_BYTES;
+  const iv = message.slice(offset, offset + IV_BYTES);
+  assertPublicKeyBytes(recipientRaw);
+  assertPublicKeyBytes(ephemeralRaw);
+
+  return {
+    header: message.slice(0, HEADER_BYTES),
+    recipientRaw,
+    ephemeralRaw,
+    iv,
+    ciphertext: message.slice(HEADER_BYTES)
+  };
 }
 
 async function encryptForRecipient(recipientB64, payload) {
@@ -188,38 +292,92 @@ async function encryptForRecipient(recipientB64, payload) {
   );
   const ephemeralRaw = new Uint8Array(await crypto.subtle.exportKey("raw", ephemeral.publicKey));
   const aesKey = await deriveAesKey(ephemeral.privateKey, recipientPublic, ephemeralRaw, recipientRaw);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
+  const header = buildHeader(recipientRaw, ephemeralRaw, iv);
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv, additionalData: header },
     aesKey,
-    enc.encode(JSON.stringify(payload))
-  );
-  return utf8ToBase64Url(JSON.stringify({
-    e: bytesToBase64Url(ephemeralRaw),
-    i: bytesToBase64Url(iv),
-    c: bufferToBase64Url(ciphertext)
-  }));
+    encodePayload(payload)
+  ));
+  return concatBytes(header, ciphertext);
 }
 
-async function decryptPayload(recipientB64, dataB64) {
-  const box = JSON.parse(base64UrlToUtf8(dataB64));
+async function decryptMessage(messageBytes) {
+  const message = parseMessage(messageBytes);
+  const ownRaw = base64UrlToBytes(ownPublicB64);
+  if (!equalBytes(message.recipientRaw, ownRaw)) {
+    throw new Error("This message was not encrypted for this browser's saved key.");
+  }
 
-  const recipientRaw = base64UrlToBytes(recipientB64);
-  const ephemeralRaw = base64UrlToBytes(box.e);
-  const ephemeralPublic = await importPublicKey(ephemeralRaw);
-  const aesKey = await deriveAesKey(ownKeys.privateKey, ephemeralPublic, ephemeralRaw, recipientRaw);
+  const ephemeralPublic = await importPublicKey(message.ephemeralRaw);
+  const aesKey = await deriveAesKey(ownKeys.privateKey, ephemeralPublic, message.ephemeralRaw, message.recipientRaw);
   const plaintext = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: base64UrlToBytes(box.i) },
+    { name: "AES-GCM", iv: message.iv, additionalData: message.header },
     aesKey,
-    base64UrlToBytes(box.c)
+    message.ciphertext
   );
-  return JSON.parse(dec.decode(plaintext));
+  return decodePayload(new Uint8Array(plaintext));
+}
+
+function displayPayload(payload) {
+  if (payload.type === PAYLOAD_TEXT) {
+    $("decryptedText").textContent = dec.decode(payload.data);
+    show($("decryptedText"));
+    return;
+  }
+
+  if (decryptedDownloadUrl) URL.revokeObjectURL(decryptedDownloadUrl);
+  const blob = new Blob([payload.data], { type: payload.mime || "application/octet-stream" });
+  decryptedDownloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = decryptedDownloadUrl;
+  link.download = payload.name || "droplock-file";
+  link.textContent = `Download ${link.download}`;
+  link.className = "buttonLink";
+  $("decryptedFile").replaceChildren(link);
+  show($("decryptedFile"));
+}
+
+async function decryptAndDisplay(messageBytes) {
+  show($("decrypt"));
+  show($("decrypting"));
+  show($("decryptedText"), false);
+  show($("decryptedFile"), false);
+  show($("decryptError"), false);
+  $("decryptedText").textContent = "";
+  $("decryptedFile").replaceChildren();
+  if (decryptedDownloadUrl) {
+    URL.revokeObjectURL(decryptedDownloadUrl);
+    decryptedDownloadUrl = undefined;
+  }
+
+  try {
+    const payload = await decryptMessage(messageBytes);
+    show($("decrypting"), false);
+    displayPayload(payload);
+    setStatus("Decrypted.");
+  } catch (err) {
+    show($("decrypting"), false);
+    $("decryptError").textContent = err.message || "Decryption failed.";
+    show($("decryptError"));
+  }
 }
 
 function setupIdentity() {
   const link = appUrl({ k: ownPublicB64 });
   $("requestLink").value = link;
   $("copyRequest").onclick = () => copyText(link);
+
+  $("encryptedFile").onchange = async () => {
+    const file = $("encryptedFile").files[0];
+    if (!file) return;
+    setStatus("Decrypting...");
+    await decryptAndDisplay(await readFileAsBytes(file));
+  };
+}
+
+function encryptedFileName() {
+  return "message.droplock";
 }
 
 async function setupCompose(recipientB64) {
@@ -232,39 +390,43 @@ async function setupCompose(recipientB64) {
     try {
       setStatus("Encrypting...");
       const payload = await selectedPayload();
-      const dataB64 = await encryptForRecipient(recipientB64, payload);
-      const link = appUrl({ k: recipientB64, d: dataB64 });
-      $("encryptedLink").value = link;
+      const messageBytes = await encryptForRecipient(recipientB64, payload);
+      const dataChars = Math.ceil(messageBytes.length * 4 / 3);
+      const downloadName = encryptedFileName();
+
+      if (encryptedDownloadUrl) URL.revokeObjectURL(encryptedDownloadUrl);
+      encryptedDownloadUrl = URL.createObjectURL(new Blob([messageBytes], { type: "application/octet-stream" }));
+      $("downloadEncrypted").href = encryptedDownloadUrl;
+      $("downloadEncrypted").download = downloadName;
+      $("downloadEncrypted").textContent = `Download ${downloadName}`;
+
+      const maxDataChars = MAX_URL_CHARS - appUrl({ m: "" }).length;
+      if (dataChars <= maxDataChars) {
+        const link = appUrl({ m: bytesToBase64Url(messageBytes) });
+        $("encryptedLink").value = link;
+        show($("linkResult"));
+        show($("linkTooLarge"), false);
+        $("copyEncrypted").onclick = () => copyText(link);
+        setStatus(`Encrypted. Link length: ${link.length.toLocaleString()} characters.`);
+      } else {
+        $("encryptedLink").value = "";
+        show($("linkResult"), false);
+        $("linkTooLarge").textContent = "Too large for a practical URL. Send the .droplock file instead.";
+        show($("linkTooLarge"));
+        setStatus("Encrypted. Send the .droplock file.");
+      }
+
+      $("secretText").value = "";
+      $("secretFile").value = "";
       show($("result"));
-      $("copyEncrypted").onclick = () => copyText(link);
-      setStatus(`Encrypted. Link length: ${link.length.toLocaleString()} characters.`);
     } catch (err) {
       setStatus(err.message || "Encryption failed.", true);
     }
   };
 }
 
-async function setupDecrypt(recipientB64, dataB64) {
-  show($("decrypt"));
-  try {
-    if (recipientB64 !== ownPublicB64) {
-      throw new Error("This secret was not encrypted for this browser's saved key.");
-    }
-    const payload = await decryptPayload(recipientB64, dataB64);
-    show($("decrypting"), false);
-
-    if (payload.kind === "text") {
-      $("decryptedText").textContent = payload.text;
-      show($("decryptedText"));
-      return;
-    }
-
-    throw new Error("Only text payloads are supported.");
-  } catch (err) {
-    show($("decrypting"), false);
-    $("decryptError").textContent = err.message || "Decryption failed.";
-    show($("decryptError"));
-  }
+async function setupDecrypt(dataB64) {
+  await decryptAndDisplay(base64UrlToBytes(dataB64));
 }
 
 async function init() {
@@ -285,10 +447,10 @@ async function init() {
 
   const params = appParams();
   const recipientB64 = params.get("k");
-  const dataB64 = params.get("d");
+  const messageB64 = params.get("m");
 
-  if (recipientB64 && dataB64) {
-    await setupDecrypt(recipientB64, dataB64);
+  if (messageB64) {
+    await setupDecrypt(messageB64);
   } else if (recipientB64) {
     await setupCompose(recipientB64);
   } else {

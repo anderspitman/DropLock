@@ -22,6 +22,8 @@
         <strong id="myFingerprint"></strong>
       </div>
       <p class="muted small">Verify this emoji fingerprint over another channel if you need protection from link tampering.</p>
+      <label for="encryptedFile">Open encrypted .droplock file</label>
+      <input id="encryptedFile" type="file" accept=".droplock,application/octet-stream">
     </section>
 
     <section id="compose" class="card hidden">
@@ -30,13 +32,21 @@
         <p><strong>Check before encrypting:</strong> Make sure these emojis match what the recipient sent you through another communication channel.</p>
         <strong id="recipientFingerprint"></strong>
       </div>
+      <p class="muted small">Choose either text or one file.</p>
       <label for="secretText">Text</label>
       <textarea id="secretText" rows="7" placeholder="Type a secret..."></textarea>
+      <div class="or">or</div>
+      <label for="secretFile">File</label>
+      <input id="secretFile" type="file">
       <button id="generateLink">Generate Link</button>
       <div id="result" class="hidden">
-        <label>Encrypted return link</label>
-        <textarea id="encryptedLink" readonly rows="4"></textarea>
-        <button id="copyEncrypted">Copy encrypted link</button>
+        <div id="linkResult">
+          <label>Encrypted return link</label>
+          <textarea id="encryptedLink" readonly rows="4"></textarea>
+          <button id="copyEncrypted">Copy encrypted link</button>
+        </div>
+        <p id="linkTooLarge" class="muted small hidden"></p>
+        <a id="downloadEncrypted" class="buttonLink" href="#" download="message.droplock">Download encrypted file</a>
       </div>
     </section>
 
@@ -44,6 +54,7 @@
       <h2>Decrypted secret</h2>
       <div id="decrypting" class="muted">Decrypting...</div>
       <pre id="decryptedText" class="hidden"></pre>
+      <div id="decryptedFile" class="hidden"></div>
       <p id="decryptError" class="error hidden"></p>
     </section>
 

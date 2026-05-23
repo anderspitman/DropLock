@@ -19,12 +19,16 @@ the receiver can decrypt it.
    is also generated.
 2. Receiver sends link to sender. Optionally sends emoji fingerprint out of
    band.
-3. Sender opens link and enters secret on the page. Optionally verifies emoji
-   fingerprint before encrypting.
-4. Sender encrypts message. Another link is generated. This one includes the
-   encrypted data.
-5. Sender sends link to receiver.
-6. Receiver opens link and reads secret.
+3. Sender opens link and enters text or chooses one file. Optionally verifies
+   emoji fingerprint before encrypting.
+4. Sender encrypts the message. If it is small enough, a return link with
+   `#m=<message>` is generated. A `.droplock` file is also generated.
+5. Sender sends the return link or `.droplock` file to receiver.
+6. Receiver opens link, or opens the `.droplock` file in the app, and reads or
+   downloads the secret.
 
+File format: see `FORMAT.md`.
+
+Files are processed in memory, not streamed.
 
 [1]: https://gist.github.com/SMUsamaShah/fd6e275e44009b72f64d0570256bb3b2
