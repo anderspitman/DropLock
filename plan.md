@@ -1,4 +1,4 @@
-Make an end-to-end encrypted, vanilla JS secret sharing web app.
+Make DropLock, an end-to-end encrypted, vanilla JS secret sharing web app.
 
 It is intended for small text secrets.
 

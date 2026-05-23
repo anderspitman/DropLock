@@ -1,4 +1,4 @@
-const DB_NAME = "secret-share-keys";
+const DB_NAME = "droplock-keys";
 const DB_STORE = "keys";
 const DB_KEY = "identity";
 const enc = new TextEncoder();
@@ -137,7 +137,7 @@ async function deriveAesKey(privateKey, publicKey, ephemeralRaw, recipientRaw) {
       name: "HKDF",
       hash: "SHA-256",
       salt: concatBytes(ephemeralRaw, recipientRaw),
-      info: enc.encode("secret-share aes-gcm")
+      info: enc.encode("droplock aes-gcm")
     },
     hkdfKey,
     { name: "AES-GCM", length: 256 },
