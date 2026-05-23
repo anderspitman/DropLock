@@ -31,4 +31,7 @@ File format: see `FORMAT.md`.
 
 Files are processed in memory, not streamed.
 
+Generating a new key changes the request link and fingerprint. Old messages for
+that browser key can no longer be decrypted.
+
 [1]: https://gist.github.com/SMUsamaShah/fd6e275e44009b72f64d0570256bb3b2

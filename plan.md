@@ -11,7 +11,8 @@ I want to invert the process and start with the person who wants to receive
 the secret.
 
 When the app launches, it should generate a non-extractable key pair if one
-doesn't already exist in IndexedDB.
+doesn't already exist in IndexedDB. The user can generate a new key after a
+warning that old messages for the current key will no longer decrypt.
 
 To protect against an attacker swapping in their own public key, a 16 emoji
 fingerprint should also be displayed, so the receiver can communicate it over

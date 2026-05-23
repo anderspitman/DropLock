@@ -114,12 +114,7 @@ async function saveStoredIdentity(privateKey, publicB64) {
   }
 }
 
-async function getOwnKeys() {
-  const saved = await loadStoredIdentity();
-  if (saved?.privateKey && saved?.publicB64) {
-    return { privateKey: saved.privateKey, publicB64: saved.publicB64 };
-  }
-
+async function generateOwnKeys() {
   const pair = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
     false,
@@ -128,6 +123,15 @@ async function getOwnKeys() {
   const publicB64 = bufferToBase64Url(await crypto.subtle.exportKey("raw", pair.publicKey));
   await saveStoredIdentity(pair.privateKey, publicB64);
   return { privateKey: pair.privateKey, publicB64 };
+}
+
+async function getOwnKeys() {
+  const saved = await loadStoredIdentity();
+  if (saved?.privateKey && saved?.publicB64) {
+    return { privateKey: saved.privateKey, publicB64: saved.publicB64 };
+  }
+
+  return generateOwnKeys();
 }
 
 async function importPublicKey(rawBytes) {
@@ -363,10 +367,34 @@ async function decryptAndDisplay(messageBytes) {
   }
 }
 
+async function useOwnKeys(keys) {
+  ownKeys = keys;
+  ownPublicB64 = keys.publicB64;
+  $("myFingerprint").textContent = await emojiFingerprint(base64UrlToBytes(ownPublicB64));
+  setupIdentity();
+}
+
 function setupIdentity() {
   const link = appUrl({ k: ownPublicB64 });
   $("requestLink").value = link;
   $("copyRequest").onclick = () => copyText(link);
+
+  $("generateNewKey").onclick = async () => {
+    const confirmed = confirm(
+      "Generate a new key?\n\n" +
+      "Messages and .droplock files encrypted for your current key will no longer decrypt in this browser. " +
+      "Your request link and fingerprint will change."
+    );
+    if (!confirmed) return;
+
+    try {
+      setStatus("Generating new key...");
+      await useOwnKeys(await generateOwnKeys());
+      setStatus("Generated new key. Share the new request link and fingerprint.");
+    } catch (err) {
+      setStatus(err.message || "Could not generate new key.", true);
+    }
+  };
 
   $("encryptedFile").onchange = async () => {
     const file = $("encryptedFile").files[0];
@@ -439,11 +467,7 @@ async function init() {
     return;
   }
 
-  ownKeys = await getOwnKeys();
-  ownPublicB64 = ownKeys.publicB64;
-  const ownRaw = base64UrlToBytes(ownPublicB64);
-  $("myFingerprint").textContent = await emojiFingerprint(ownRaw);
-  setupIdentity();
+  await useOwnKeys(await getOwnKeys());
 
   const params = appParams();
   const recipientB64 = params.get("k");

@@ -64,6 +64,14 @@ button:hover, .buttonLink:hover {
   background: #374151;
 }
 
+button.danger {
+  background: #b91c1c;
+}
+
+button.danger:hover {
+  background: #991b1b;
+}
+
 input[type="file"] {
   margin-top: .3rem;
 }
@@ -151,5 +159,14 @@ pre {
 
   button:hover, .buttonLink:hover {
     background: #d1d5db;
+  }
+
+  button.danger {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  button.danger:hover {
+    background: #dc2626;
   }
 }
