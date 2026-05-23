@@ -109,8 +109,8 @@ pre {
 .fingerprint strong {
   display: block;
   font-size: 1.7rem;
-  letter-spacing: .15rem;
-  line-height: 1.6;
+  letter-spacing: .05rem;
+  line-height: 1.35;
 }
 
 .verifyBox {

@@ -9,13 +9,12 @@
 <body>
   <main>
     <h1>DropLock</h1>
-    <p class="muted">End-to-end encrypted secret sharing.</p>
+    <p class="muted">Simple safe secret sharing</p>
 
     <section id="identity" class="card hidden">
       <h2>Receive a secret</h2>
-      <p>Send this request link to the person who will share with you.</p>
-      <label>Request link</label>
-      <textarea id="requestLink" readonly rows="3"></textarea>
+      <p>Share this link with anyone you want to be able to send you a secret</p>
+      <textarea id="requestLink" readonly rows="3" aria-label="Request link"></textarea>
       <button id="copyRequest">Copy request link</button>
       <div class="fingerprint">
         <span>Fingerprint</span>
@@ -28,12 +27,11 @@
     </section>
 
     <section id="compose" class="card hidden">
-      <h2>Encrypt a secret</h2>
+      <h2>Share a secret</h2>
       <div class="fingerprint verifyBox">
         <p><strong>Check before encrypting:</strong> Make sure these emojis match what the recipient sent you through another communication channel.</p>
         <strong id="recipientFingerprint"></strong>
       </div>
-      <p class="muted small">Choose either text or one file.</p>
       <label for="secretText">Text</label>
       <textarea id="secretText" rows="7" placeholder="Type a secret..."></textarea>
       <div class="or">or</div>
