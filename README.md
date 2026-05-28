@@ -1,6 +1,6 @@
 # DropLock
 
-Most (maybe all) [existing file transfer tools][1] require the sender to either
+Most (maybe all) [existing sharing tools][1] require the sender to either
 send the decryption key in the URL or out of band.
 
 The nicest UX is sending the key in the URL fragment, but this means anyone
@@ -19,17 +19,13 @@ the receiver can decrypt it.
    is also generated.
 2. Receiver sends link to sender. Optionally sends emoji fingerprint out of
    band.
-3. Sender opens link and enters text or chooses one file. Optionally verifies
-   emoji fingerprint before encrypting.
-4. Sender encrypts the message. If it is small enough, a return link with
-   `#m=<message>` is generated. A `.droplock` file is also generated.
-5. Sender sends the return link or `.droplock` file to receiver.
-6. Receiver opens link, or opens the `.droplock` file in the app, and reads or
-   downloads the secret.
+3. Sender opens link and enters text. Optionally verifies emoji fingerprint
+   before encrypting.
+4. Sender encrypts the message and gets a return link with `#m=<message>`.
+5. Sender sends the return link to receiver.
+6. Receiver opens link and reads the secret.
 
-File format: see `FORMAT.md`.
-
-Files are processed in memory, not streamed.
+Message format: see `FORMAT.md`.
 
 Generating a new key changes the request link and fingerprint. Old messages for
 that browser key can no longer be decrypted.

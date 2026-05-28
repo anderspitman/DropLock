@@ -1,4 +1,4 @@
-# DropLock format
+# DropLock message format
 
 Request link:
 
@@ -11,8 +11,6 @@ Encrypted message link:
 ```txt
 #m=base64url(binary message)
 ```
-
-The same binary message can be sent as a `.droplock` file.
 
 ## Binary message
 
@@ -40,13 +38,4 @@ Crypto:
 
 ## Encrypted plaintext
 
-All offsets are bytes after decryption.
-
-| Offset | Size     | Field                                      |
-| -----: | -------: | ------------------------------------------ |
-|      0 |        1 | payload type: `1` text, `2` file           |
-|      1 |        2 | filename length, uint16 big-endian         |
-|      3 |        2 | MIME type length, uint16 big-endian        |
-|      5 | variable | UTF-8 filename                             |
-|    ... | variable | UTF-8 MIME type                            |
-|    ... |     rest | payload bytes; text payloads are UTF-8     |
+The plaintext is the UTF-8 encoded secret text.

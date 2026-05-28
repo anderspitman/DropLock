@@ -34,7 +34,7 @@ label, .fingerprint span {
   font-weight: 650;
 }
 
-textarea, input[type="file"] {
+textarea {
   width: 100%;
   box-sizing: border-box;
 }
@@ -47,7 +47,7 @@ textarea {
   font: inherit;
 }
 
-button, .buttonLink {
+button {
   display: inline-block;
   margin-top: .75rem;
   border: 0;
@@ -57,10 +57,9 @@ button, .buttonLink {
   color: #fff;
   font: inherit;
   cursor: pointer;
-  text-decoration: none;
 }
 
-button:hover, .buttonLink:hover {
+button:hover {
   background: #374151;
 }
 
@@ -70,10 +69,6 @@ button.danger {
 
 button.danger:hover {
   background: #991b1b;
-}
-
-input[type="file"] {
-  margin-top: .3rem;
 }
 
 pre {
@@ -126,11 +121,6 @@ pre {
   color: #78350f;
 }
 
-.or {
-  margin: .75rem 0 0;
-  color: #6b7280;
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     background: #030712;
@@ -152,12 +142,12 @@ pre {
     color: #fde68a;
   }
 
-  button, .buttonLink {
+  button {
     background: #f9fafb;
     color: #111827;
   }
 
-  button:hover, .buttonLink:hover {
+  button:hover {
     background: #d1d5db;
   }
 

@@ -6,8 +6,6 @@ const FORMAT_VERSION = 1;
 const PUBLIC_KEY_BYTES = 65;
 const IV_BYTES = 12;
 const HEADER_BYTES = MAGIC.length + 1 + PUBLIC_KEY_BYTES + PUBLIC_KEY_BYTES + IV_BYTES;
-const PAYLOAD_TEXT = 1;
-const PAYLOAD_FILE = 2;
 const MAX_URL_CHARS = 60000;
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -21,8 +19,6 @@ const EMOJI = [
 
 let ownKeys;
 let ownPublicB64;
-let encryptedDownloadUrl;
-let decryptedDownloadUrl;
 
 function show(el, visible = true) {
   el.classList.toggle("hidden", !visible);
@@ -192,57 +188,10 @@ async function copyText(text) {
   }
 }
 
-async function readFileAsBytes(file) {
-  return new Uint8Array(await file.arrayBuffer());
-}
-
-async function selectedPayload() {
-  const file = $("secretFile").files[0];
-  if (file) {
-    return {
-      type: PAYLOAD_FILE,
-      name: file.name || "file",
-      mime: file.type || "application/octet-stream",
-      data: await readFileAsBytes(file)
-    };
-  }
-
+function selectedPlaintext() {
   const text = $("secretText").value;
-  if (!text) throw new Error("Type text or choose a file first.");
-  return { type: PAYLOAD_TEXT, name: "", mime: "text/plain;charset=utf-8", data: enc.encode(text) };
-}
-
-function encodePayload(payload) {
-  const name = enc.encode(payload.name || "");
-  const mime = enc.encode(payload.mime || "");
-  if (name.length > 65535 || mime.length > 65535) {
-    throw new Error("File metadata is too long.");
-  }
-  return concatBytes(
-    Uint8Array.of(payload.type, name.length >> 8, name.length & 255, mime.length >> 8, mime.length & 255),
-    name,
-    mime,
-    payload.data
-  );
-}
-
-function decodePayload(bytes) {
-  if (bytes.length < 5) throw new Error("Invalid plaintext payload.");
-  const type = bytes[0];
-  const nameLen = (bytes[1] << 8) | bytes[2];
-  const mimeLen = (bytes[3] << 8) | bytes[4];
-  const nameStart = 5;
-  const mimeStart = nameStart + nameLen;
-  const dataStart = mimeStart + mimeLen;
-  if (dataStart > bytes.length) throw new Error("Invalid plaintext payload.");
-  if (type !== PAYLOAD_TEXT && type !== PAYLOAD_FILE) throw new Error("Unsupported payload type.");
-
-  return {
-    type,
-    name: dec.decode(bytes.slice(nameStart, mimeStart)),
-    mime: dec.decode(bytes.slice(mimeStart, dataStart)),
-    data: bytes.slice(dataStart)
-  };
+  if (!text) throw new Error("Type a secret first.");
+  return enc.encode(text);
 }
 
 function buildHeader(recipientRaw, ephemeralRaw, iv) {
@@ -286,7 +235,7 @@ function parseMessage(message) {
   };
 }
 
-async function encryptForRecipient(recipientB64, payload) {
+async function encryptForRecipient(recipientB64, plaintext) {
   const recipientRaw = base64UrlToBytes(recipientB64);
   const recipientPublic = await importPublicKey(recipientRaw);
   const ephemeral = await crypto.subtle.generateKey(
@@ -301,7 +250,7 @@ async function encryptForRecipient(recipientB64, payload) {
   const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
     { name: "AES-GCM", iv, additionalData: header },
     aesKey,
-    encodePayload(payload)
+    plaintext
   ));
   return concatBytes(header, ciphertext);
 }
@@ -320,45 +269,21 @@ async function decryptMessage(messageBytes) {
     aesKey,
     message.ciphertext
   );
-  return decodePayload(new Uint8Array(plaintext));
-}
-
-function displayPayload(payload) {
-  if (payload.type === PAYLOAD_TEXT) {
-    $("decryptedText").textContent = dec.decode(payload.data);
-    show($("decryptedText"));
-    return;
-  }
-
-  if (decryptedDownloadUrl) URL.revokeObjectURL(decryptedDownloadUrl);
-  const blob = new Blob([payload.data], { type: payload.mime || "application/octet-stream" });
-  decryptedDownloadUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = decryptedDownloadUrl;
-  link.download = payload.name || "droplock-file";
-  link.textContent = `Download ${link.download}`;
-  link.className = "buttonLink";
-  $("decryptedFile").replaceChildren(link);
-  show($("decryptedFile"));
+  return new Uint8Array(plaintext);
 }
 
 async function decryptAndDisplay(messageBytes) {
   show($("decrypt"));
   show($("decrypting"));
   show($("decryptedText"), false);
-  show($("decryptedFile"), false);
   show($("decryptError"), false);
   $("decryptedText").textContent = "";
-  $("decryptedFile").replaceChildren();
-  if (decryptedDownloadUrl) {
-    URL.revokeObjectURL(decryptedDownloadUrl);
-    decryptedDownloadUrl = undefined;
-  }
 
   try {
-    const payload = await decryptMessage(messageBytes);
+    const plaintext = await decryptMessage(messageBytes);
     show($("decrypting"), false);
-    displayPayload(payload);
+    $("decryptedText").textContent = dec.decode(plaintext);
+    show($("decryptedText"));
     setStatus("Decrypted.");
   } catch (err) {
     show($("decrypting"), false);
@@ -382,7 +307,7 @@ function setupIdentity() {
   $("generateNewKey").onclick = async () => {
     const confirmed = confirm(
       "Generate a new key?\n\n" +
-      "Messages and .droplock files encrypted for your current key will no longer decrypt in this browser. " +
+      "Messages encrypted for your current key will no longer decrypt in this browser. " +
       "Your request link and fingerprint will change."
     );
     if (!confirmed) return;
@@ -395,17 +320,6 @@ function setupIdentity() {
       setStatus(err.message || "Could not generate new key.", true);
     }
   };
-
-  $("encryptedFile").onchange = async () => {
-    const file = $("encryptedFile").files[0];
-    if (!file) return;
-    setStatus("Decrypting...");
-    await decryptAndDisplay(await readFileAsBytes(file));
-  };
-}
-
-function encryptedFileName() {
-  return "message.droplock";
 }
 
 async function setupCompose(recipientB64) {
@@ -417,44 +331,27 @@ async function setupCompose(recipientB64) {
   $("generateLink").onclick = async () => {
     try {
       setStatus("Encrypting...");
-      const payload = await selectedPayload();
-      const messageBytes = await encryptForRecipient(recipientB64, payload);
-      const dataChars = Math.ceil(messageBytes.length * 4 / 3);
-      const downloadName = encryptedFileName();
-
-      if (encryptedDownloadUrl) URL.revokeObjectURL(encryptedDownloadUrl);
-      encryptedDownloadUrl = URL.createObjectURL(new Blob([messageBytes], { type: "application/octet-stream" }));
-      $("downloadEncrypted").href = encryptedDownloadUrl;
-      $("downloadEncrypted").download = downloadName;
-      $("downloadEncrypted").textContent = `Download ${downloadName}`;
-
-      const maxDataChars = MAX_URL_CHARS - appUrl({ m: "" }).length;
-      if (dataChars <= maxDataChars) {
-        const link = appUrl({ m: bytesToBase64Url(messageBytes) });
-        $("encryptedLink").value = link;
-        show($("linkResult"));
-        show($("linkTooLarge"), false);
-        $("copyEncrypted").onclick = () => copyText(link);
-        setStatus(`Encrypted. Link length: ${link.length.toLocaleString()} characters.`);
-      } else {
-        $("encryptedLink").value = "";
-        show($("linkResult"), false);
-        $("linkTooLarge").textContent = "Too large for a practical URL. Send the .droplock file instead.";
-        show($("linkTooLarge"));
-        setStatus("Encrypted. Send the .droplock file.");
+      show($("result"), false);
+      $("encryptedLink").value = "";
+      const messageBytes = await encryptForRecipient(recipientB64, selectedPlaintext());
+      const link = appUrl({ m: bytesToBase64Url(messageBytes) });
+      if (link.length > MAX_URL_CHARS) {
+        throw new Error("Secret is too long for a URL.");
       }
 
-      $("secretText").value = "";
-      $("secretFile").value = "";
+      $("encryptedLink").value = link;
       show($("result"));
+      $("copyEncrypted").onclick = () => copyText(link);
+      $("secretText").value = "";
+      setStatus(`Encrypted. Link length: ${link.length.toLocaleString()} characters.`);
     } catch (err) {
       setStatus(err.message || "Encryption failed.", true);
     }
   };
 }
 
-async function setupDecrypt(dataB64) {
-  await decryptAndDisplay(base64UrlToBytes(dataB64));
+async function setupDecrypt(messageB64) {
+  await decryptAndDisplay(base64UrlToBytes(messageB64));
 }
 
 async function init() {
