@@ -15,19 +15,16 @@ secure or not, without worrying about where the link ends up, because only
 the receiver can decrypt it.
 
 1. Receiver opens the app which generates a key pair with a non-extractable
-   private key. A link including the public key is generated. Emoji fingerprint
-   is also generated.
-2. Receiver sends link to sender. Optionally sends emoji fingerprint out of
-   band.
-3. Sender opens link and enters text. Optionally verifies emoji fingerprint
-   before encrypting.
+   private key. A link including the public key is generated.
+2. Receiver sends link to sender.
+3. Sender opens link and enters text.
 4. Sender encrypts the message and gets a return link with `#m=<message>`.
 5. Sender sends the return link to receiver.
 6. Receiver opens link and reads the secret.
 
 Message format: see `FORMAT.md`.
 
-Generating a new key changes the request link and fingerprint. Old messages for
-that browser key can no longer be decrypted.
+Generating a new key changes the request link. Old messages for that browser
+key can no longer be decrypted.
 
 [1]: https://gist.github.com/SMUsamaShah/fd6e275e44009b72f64d0570256bb3b2

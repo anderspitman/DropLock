@@ -10,12 +10,6 @@ const MAX_URL_CHARS = 60000;
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const $ = (id) => document.getElementById(id);
-const EMOJI = [
-  "😀","😎","🥳","🤖","👻","🐶","🐱","🦊","🐻","🐼","🐸","🦁","🐵","🐧","🐢","🦋",
-  "🌲","🌵","🌻","🍄","🍎","🍋","🍒","🥝","🍕","🍩","⚽","🎲","🎸","🚗","🚀","🛸",
-  "🌙","⭐","☀️","⚡","🔥","❄️","🌈","☂️","💎","🔑","🔒","📦","📚","✏️","🎁","🎈",
-  "❤️","🧡","💛","💚","💙","💜","🤍","🖤","✅","🔔","⏰","🧭","🏠","🌍","🧪","🧩"
-];
 
 let ownKeys;
 let ownPublicB64;
@@ -162,11 +156,6 @@ async function deriveAesKey(privateKey, publicKey, ephemeralRaw, recipientRaw) {
   );
 }
 
-async function emojiFingerprint(rawBytes) {
-  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", rawBytes));
-  return Array.from(hash.slice(0, 16), (byte) => EMOJI[byte % EMOJI.length]).join("\u2009");
-}
-
 function appUrl(params) {
   const url = new URL(location.href);
   url.search = "";
@@ -295,7 +284,6 @@ async function decryptAndDisplay(messageBytes) {
 async function useOwnKeys(keys) {
   ownKeys = keys;
   ownPublicB64 = keys.publicB64;
-  $("myFingerprint").textContent = await emojiFingerprint(base64UrlToBytes(ownPublicB64));
   setupIdentity();
 }
 
@@ -308,14 +296,14 @@ function setupIdentity() {
     const confirmed = confirm(
       "Generate a new key?\n\n" +
       "Messages encrypted for your current key will no longer decrypt in this browser. " +
-      "Your request link and fingerprint will change."
+      "Your request link will change."
     );
     if (!confirmed) return;
 
     try {
       setStatus("Generating new key...");
       await useOwnKeys(await generateOwnKeys());
-      setStatus("Generated new key. Share the new request link and fingerprint.");
+      setStatus("Generated new key. Share the new request link.");
     } catch (err) {
       setStatus(err.message || "Could not generate new key.", true);
     }
@@ -324,9 +312,7 @@ function setupIdentity() {
 
 async function setupCompose(recipientB64) {
   show($("compose"));
-  const recipientRaw = base64UrlToBytes(recipientB64);
-  await importPublicKey(recipientRaw);
-  $("recipientFingerprint").textContent = await emojiFingerprint(recipientRaw);
+  await importPublicKey(base64UrlToBytes(recipientB64));
 
   $("generateLink").onclick = async () => {
     try {

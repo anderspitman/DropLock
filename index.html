@@ -16,20 +16,11 @@
       <p>Share this link with anyone you want to be able to send you a secret</p>
       <textarea id="requestLink" readonly rows="3" aria-label="Request link"></textarea>
       <button id="copyRequest">Copy request link</button>
-      <div class="fingerprint">
-        <span>Fingerprint</span>
-        <strong id="myFingerprint"></strong>
-      </div>
-      <p class="muted small">Verify this emoji fingerprint over another channel if you need protection from link tampering.</p>
       <button id="generateNewKey" class="danger">Generate new key</button>
     </section>
 
     <section id="compose" class="card hidden">
       <h2>Share a secret</h2>
-      <div class="fingerprint verifyBox">
-        <p><strong>Check before encrypting:</strong> Make sure these emojis match what the recipient sent you through another communication channel.</p>
-        <strong id="recipientFingerprint"></strong>
-      </div>
       <label for="secretText">Text</label>
       <textarea id="secretText" rows="7" placeholder="Type a secret..."></textarea>
       <button id="generateLink">Generate Link</button>

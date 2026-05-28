@@ -28,7 +28,7 @@ h1, h2 {
   box-shadow: 0 1px 2px rgb(0 0 0 / .04);
 }
 
-label, .fingerprint span {
+label {
   display: block;
   margin: .75rem 0 .25rem;
   font-weight: 650;
@@ -101,26 +101,6 @@ pre {
   color: #047857;
 }
 
-.fingerprint strong {
-  display: block;
-  font-size: 1.7rem;
-  letter-spacing: .05rem;
-  line-height: 1.35;
-}
-
-.verifyBox {
-  margin: 1rem 0;
-  padding: .9rem;
-  border: 2px solid #f59e0b;
-  border-radius: .7rem;
-  background: #fffbeb;
-}
-
-.verifyBox p {
-  margin: 0 0 .4rem;
-  color: #78350f;
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     background: #030712;
@@ -131,15 +111,6 @@ pre {
     background: #111827;
     border-color: #374151;
     color: #f9fafb;
-  }
-
-  .verifyBox {
-    background: #451a03;
-    border-color: #f59e0b;
-  }
-
-  .verifyBox p {
-    color: #fde68a;
   }
 
   button {

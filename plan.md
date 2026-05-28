@@ -14,23 +14,12 @@ When the app launches, it should generate a non-extractable key pair if one
 doesn't already exist in IndexedDB. The user can generate a new key after a
 warning that old messages for the current key will no longer decrypt.
 
-To protect against an attacker swapping in their own public key, a 16 emoji
-fingerprint should also be displayed, so the receiver can communicate it over
-a second channel.
-
 The app should then display a URL like this:
 
 `https://example.com/#k=<public key>`
 
-The emoji fingerprint should be displayed here as well. Actually using the
-fingerprint is up to the users. Don't make the UX worse by trying to force
-compliance.
-
 When someone else loads that URL, it should display a page with a text input
 and a "Generate Link" button.
-
-It should also tell the sender to make sure the emojis match what the recipient
-sent through another communication channel.
 
 When they click the button, it should use the public key from the URL fragment
 to encrypt the selected text into the DropLock binary message format and
