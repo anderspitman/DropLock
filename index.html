@@ -194,6 +194,7 @@
       <p>Your browser creates a public/private key pair. The public part is in your lock box link. The private part is saved by this browser as a non-extractable key, so it cannot be exported and secret links can only be opened in the same browser profile where the lock box was created. Each device or browser gets a different lock box.</p>
       <p>When someone locks a secret for you, their browser uses your public key plus a one-time key to create an AES-GCM key with HKDF-SHA-256. The secret is locked locally, and the result is placed in the link fragment, which is not sent to the web server.</p>
       <p>Tradeoffs: DropLock does not use fingerprint checking. If someone can replace the lock box link in transit, they can make the sender lock the secret for them instead. For stronger assurance, have the receiver send the lock box link over two different channels and compare that the links are identical, or use one channel you fully trust.</p>
+      <p><strong>Warning:</strong> DropLock has not been reviewed by a security expert.</p>
     </details>
   </main>
   <script>
