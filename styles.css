@@ -96,9 +96,20 @@ pre {
   color: #b91c1c;
 }
 
-.status {
-  min-height: 1.5rem;
-  color: #047857;
+.securityInfo {
+  margin-top: .5rem;
+  color: #6b7280;
+  font-size: .9rem;
+}
+
+.securityInfo summary {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: .15rem;
+}
+
+.securityInfo p {
+  margin: .75rem 0 0;
 }
 
 @media (prefers-color-scheme: dark) {

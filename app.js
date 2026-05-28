@@ -18,9 +18,11 @@ function show(el, visible = true) {
   el.classList.toggle("hidden", !visible);
 }
 
-function setStatus(text, isError = false) {
-  $("status").textContent = text;
-  $("status").className = isError ? "status error" : "status";
+function showAppError(text) {
+  const error = document.createElement("p");
+  error.className = "error";
+  error.textContent = text;
+  document.querySelector("main").appendChild(error);
 }
 
 function bytesToBase64Url(bytes) {
@@ -168,12 +170,18 @@ function appParams() {
   return new URLSearchParams(fragment);
 }
 
-async function copyText(text) {
+async function copyText(text, button) {
   try {
     await navigator.clipboard.writeText(text);
-    setStatus("Copied.");
+    if (button) {
+      const label = button.dataset.label || button.textContent;
+      button.dataset.label = label;
+      button.textContent = "Copied";
+      clearTimeout(button.copyTimer);
+      button.copyTimer = setTimeout(() => { button.textContent = label; }, 1200);
+    }
   } catch {
-    setStatus("Copy failed. Select the link and copy it manually.", true);
+    alert("Copy failed. Select the link and copy it manually.");
   }
 }
 
@@ -273,7 +281,6 @@ async function decryptAndDisplay(messageBytes) {
     show($("decrypting"), false);
     $("decryptedText").textContent = dec.decode(plaintext);
     show($("decryptedText"));
-    setStatus("Secret opened.");
   } catch (err) {
     show($("decrypting"), false);
     $("decryptError").textContent = err.message || "Could not open this secret link.";
@@ -290,7 +297,7 @@ async function useOwnKeys(keys) {
 function setupIdentity() {
   const link = appUrl({ k: ownPublicB64 });
   $("requestLink").value = link;
-  $("copyRequest").onclick = () => copyText(link);
+  $("copyRequest").onclick = () => copyText(link, $("copyRequest"));
 
   $("generateNewKey").onclick = async () => {
     const confirmed = confirm(
@@ -301,11 +308,9 @@ function setupIdentity() {
     if (!confirmed) return;
 
     try {
-      setStatus("Creating new lock box link...");
       await useOwnKeys(await generateOwnKeys());
-      setStatus("New lock box link ready.");
     } catch (err) {
-      setStatus(err.message || "Could not create a new lock box link.", true);
+      alert(err.message || "Could not create a new lock box link.");
     }
   };
 }
@@ -316,7 +321,6 @@ async function setupCompose(recipientB64) {
 
   $("generateLink").onclick = async () => {
     try {
-      setStatus("Creating secret link...");
       show($("result"), false);
       $("encryptedLink").value = "";
       const messageBytes = await encryptForRecipient(recipientB64, selectedPlaintext());
@@ -327,11 +331,10 @@ async function setupCompose(recipientB64) {
 
       $("encryptedLink").value = link;
       show($("result"));
-      $("copyEncrypted").onclick = () => copyText(link);
+      $("copyEncrypted").onclick = () => copyText(link, $("copyEncrypted"));
       $("secretText").value = "";
-      setStatus(`Secret link ready. Length: ${link.length.toLocaleString()} characters.`);
     } catch (err) {
-      setStatus(err.message || "Could not create secret link.", true);
+      alert(err.message || "Could not create secret link.");
     }
   };
 }
@@ -342,11 +345,11 @@ async function setupDecrypt(messageB64) {
 
 async function init() {
   if (!crypto.subtle) {
-    setStatus("This browser cannot protect secrets here. Use HTTPS or localhost.", true);
+    showAppError("This browser cannot protect secrets here. Use HTTPS or localhost.");
     return;
   }
   if (!("indexedDB" in window)) {
-    setStatus("This browser cannot save your lock box. Try a different browser or disable private browsing.", true);
+    showAppError("This browser cannot save your lock box. Try a different browser or disable private browsing.");
     return;
   }
 
@@ -365,4 +368,4 @@ async function init() {
   }
 }
 
-init().catch((err) => setStatus(err.message || "Something went wrong.", true));
+init().catch((err) => showAppError(err.message || "Something went wrong."));
