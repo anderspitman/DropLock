@@ -13,27 +13,28 @@
 
     <section id="identity" class="card hidden">
       <h2>Receive a secret</h2>
-      <p>Share this link with anyone you want to be able to send you a secret</p>
-      <textarea id="requestLink" readonly rows="3" aria-label="Request link"></textarea>
-      <button id="copyRequest">Copy request link</button>
-      <button id="generateNewKey" class="danger">Generate new key</button>
+      <p>The link below is like an open lock box that belongs to you. Anyone you share it with can put a secret inside and create a locked link that only you can open.</p>
+      <textarea id="requestLink" readonly rows="3" aria-label="Lock box link"></textarea>
+      <button id="copyRequest">Copy link</button>
+      <button id="generateNewKey" class="danger">New lock box</button>
     </section>
 
     <section id="compose" class="card hidden">
       <h2>Share a secret</h2>
+      <p>This page is like an open lock box that someone shared with you. Type a message below, then you can create a new link that only that person can open.</p>
       <label for="secretText">Text</label>
       <textarea id="secretText" rows="7" placeholder="Type a secret..."></textarea>
-      <button id="generateLink">Generate Link</button>
+      <button id="generateLink">Lock it</button>
       <div id="result" class="hidden">
-        <label>Encrypted return link</label>
+        <label>Secret link</label>
         <textarea id="encryptedLink" readonly rows="4"></textarea>
-        <button id="copyEncrypted">Copy encrypted link</button>
+        <button id="copyEncrypted">Copy secret link</button>
       </div>
     </section>
 
     <section id="decrypt" class="card hidden">
-      <h2>Decrypted secret</h2>
-      <div id="decrypting" class="muted">Decrypting...</div>
+      <h2>Secret</h2>
+      <div id="decrypting" class="muted">Opening...</div>
       <pre id="decryptedText" class="hidden"></pre>
       <p id="decryptError" class="error hidden"></p>
     </section>

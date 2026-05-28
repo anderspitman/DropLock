@@ -63,7 +63,7 @@ function equalBytes(a, b) {
 
 function assertPublicKeyBytes(rawBytes) {
   if (rawBytes.length !== PUBLIC_KEY_BYTES || rawBytes[0] !== 0x04) {
-    throw new Error("Invalid public key.");
+    throw new Error("Invalid lock box link.");
   }
 }
 
@@ -200,9 +200,9 @@ function buildHeader(recipientRaw, ephemeralRaw, iv) {
 }
 
 function parseMessage(message) {
-  if (message.length < HEADER_BYTES + 16) throw new Error("Invalid encrypted message.");
+  if (message.length < HEADER_BYTES + 16) throw new Error("Invalid secret link.");
   for (let i = 0; i < MAGIC.length; i++) {
-    if (message[i] !== MAGIC[i]) throw new Error("Invalid encrypted message.");
+    if (message[i] !== MAGIC[i]) throw new Error("Invalid secret link.");
   }
   if (message[MAGIC.length] !== FORMAT_VERSION) throw new Error("Unsupported message format.");
 
@@ -248,7 +248,7 @@ async function decryptMessage(messageBytes) {
   const message = parseMessage(messageBytes);
   const ownRaw = base64UrlToBytes(ownPublicB64);
   if (!equalBytes(message.recipientRaw, ownRaw)) {
-    throw new Error("This message was not encrypted for this browser's saved key.");
+    throw new Error("This secret link was made for a different lock box.");
   }
 
   const ephemeralPublic = await importPublicKey(message.ephemeralRaw);
@@ -273,10 +273,10 @@ async function decryptAndDisplay(messageBytes) {
     show($("decrypting"), false);
     $("decryptedText").textContent = dec.decode(plaintext);
     show($("decryptedText"));
-    setStatus("Decrypted.");
+    setStatus("Secret opened.");
   } catch (err) {
     show($("decrypting"), false);
-    $("decryptError").textContent = err.message || "Decryption failed.";
+    $("decryptError").textContent = err.message || "Could not open this secret link.";
     show($("decryptError"));
   }
 }
@@ -294,18 +294,18 @@ function setupIdentity() {
 
   $("generateNewKey").onclick = async () => {
     const confirmed = confirm(
-      "Generate a new key?\n\n" +
-      "Messages encrypted for your current key will no longer decrypt in this browser. " +
-      "Your request link will change."
+      "Create a new lock box link?\n\n" +
+      "Secret links already made for your old lock box link will no longer open here. " +
+      "Your lock box link will change."
     );
     if (!confirmed) return;
 
     try {
-      setStatus("Generating new key...");
+      setStatus("Creating new lock box link...");
       await useOwnKeys(await generateOwnKeys());
-      setStatus("Generated new key. Share the new request link.");
+      setStatus("New lock box link ready.");
     } catch (err) {
-      setStatus(err.message || "Could not generate new key.", true);
+      setStatus(err.message || "Could not create a new lock box link.", true);
     }
   };
 }
@@ -316,7 +316,7 @@ async function setupCompose(recipientB64) {
 
   $("generateLink").onclick = async () => {
     try {
-      setStatus("Encrypting...");
+      setStatus("Creating secret link...");
       show($("result"), false);
       $("encryptedLink").value = "";
       const messageBytes = await encryptForRecipient(recipientB64, selectedPlaintext());
@@ -329,9 +329,9 @@ async function setupCompose(recipientB64) {
       show($("result"));
       $("copyEncrypted").onclick = () => copyText(link);
       $("secretText").value = "";
-      setStatus(`Encrypted. Link length: ${link.length.toLocaleString()} characters.`);
+      setStatus(`Secret link ready. Length: ${link.length.toLocaleString()} characters.`);
     } catch (err) {
-      setStatus(err.message || "Encryption failed.", true);
+      setStatus(err.message || "Could not create secret link.", true);
     }
   };
 }
@@ -342,11 +342,11 @@ async function setupDecrypt(messageB64) {
 
 async function init() {
   if (!crypto.subtle) {
-    setStatus("WebCrypto is unavailable. Use HTTPS or localhost.", true);
+    setStatus("This browser cannot protect secrets here. Use HTTPS or localhost.", true);
     return;
   }
   if (!("indexedDB" in window)) {
-    setStatus("IndexedDB is unavailable, so this browser cannot save non-extractable keys.", true);
+    setStatus("This browser cannot save your lock box. Try a different browser or disable private browsing.", true);
     return;
   }
 
