@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-M0Q+XD7CiaQE8TttxFXuGYl4jyh2zgDbue6TwBuz7tM='; style-src 'sha256-qlocKWhQXHGC7sz8NEPhpsMb3zr1VjFpUu8qs1V3PvA='; img-src 'none'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-M0Q+XD7CiaQE8TttxFXuGYl4jyh2zgDbue6TwBuz7tM='; style-src 'sha256-eFCFY1wIqBTUVo3poTLdKOqc6rp8ZWmPjh/1bQDUjyg='; img-src 'none'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
   <title>DropLock</title>
   <style>
     :root {
@@ -124,6 +124,16 @@
       margin: .75rem 0 0;
     }
 
+    .sourceLink {
+      margin: .75rem 0 0;
+      color: #6b7280;
+      font-size: .9rem;
+    }
+
+    .sourceLink a {
+      color: inherit;
+    }
+
     @media (prefers-color-scheme: dark) {
       :root {
         background: #030712;
@@ -197,6 +207,8 @@
       <p>Tradeoffs: DropLock does not use fingerprint checking. If someone can replace the lock box link in transit, they can make the sender lock the secret for them instead. For stronger assurance, have the receiver send the lock box link over two different channels and compare that the links are identical, or use one channel you fully trust.</p>
       <p><strong>Warning:</strong> DropLock has not been reviewed by a security expert.</p>
     </details>
+
+    <p class="sourceLink"><a href="https://github.com/anderspitman/DropLock/" rel="noreferrer">Source code</a></p>
   </main>
   <script>
     const DB_NAME = "droplock-keys";
