@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="DropLock logo" width="160">
+</p>
+
 # DropLock
 
 Most (maybe all) [existing sharing tools][1] require the sender to either

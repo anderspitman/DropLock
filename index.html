@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-M0Q+XD7CiaQE8TttxFXuGYl4jyh2zgDbue6TwBuz7tM='; style-src 'sha256-eFCFY1wIqBTUVo3poTLdKOqc6rp8ZWmPjh/1bQDUjyg='; img-src 'none'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-M0Q+XD7CiaQE8TttxFXuGYl4jyh2zgDbue6TwBuz7tM='; style-src 'sha256-ggVGUjhIZen/xoP3Kb+zCwtlHaKTKtWZ4fU+/VDAmuY='; img-src 'self'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
   <title>DropLock</title>
+  <link rel="icon" href="logo.png" type="image/png" sizes="256x256">
   <style>
     :root {
       color-scheme: light dark;
@@ -25,6 +26,27 @@
     main {
       max-width: 46rem;
       margin: 0 auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .9rem;
+      margin-bottom: 1rem;
+    }
+
+    .brand img {
+      width: 3.5rem;
+      height: 3.5rem;
+      border-radius: .8rem;
+    }
+
+    .brand h1 {
+      margin: 0 0 .2rem;
+    }
+
+    .brand p {
+      margin: 0;
     }
 
     h1, h2 {
@@ -169,8 +191,13 @@
 </head>
 <body class="booting">
   <main>
-    <h1>DropLock</h1>
-    <p class="muted">Simple safe secret sharing</p>
+    <header class="brand">
+      <img src="logo.png" alt="" width="256" height="256">
+      <div>
+        <h1>DropLock</h1>
+        <p class="muted">Simple safe secret sharing</p>
+      </div>
+    </header>
 
     <section id="identity" class="card hidden">
       <h2>Receive a secret</h2>
