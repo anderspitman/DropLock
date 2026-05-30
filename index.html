@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-M0Q+XD7CiaQE8TttxFXuGYl4jyh2zgDbue6TwBuz7tM='; style-src 'sha256-ggVGUjhIZen/xoP3Kb+zCwtlHaKTKtWZ4fU+/VDAmuY='; img-src 'self'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-aDdD474l5MdlWXEfeezlrXpGT8unIolVuMYczpokXio='; style-src 'sha256-ggVGUjhIZen/xoP3Kb+zCwtlHaKTKtWZ4fU+/VDAmuY='; img-src 'self'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'">
   <title>DropLock</title>
   <link rel="icon" href="logo.png" type="image/png" sizes="256x256">
   <style>
@@ -247,6 +247,7 @@
     const IV_BYTES = 12;
     const HEADER_BYTES = MAGIC.length + 1 + PUBLIC_KEY_BYTES + PUBLIC_KEY_BYTES + IV_BYTES;
     const MAX_URL_CHARS = 60000;
+    const DECRYPT_ERROR_HELP = "Could not open this secret. It can only be opened in the same browser and browser profile that created your lock box. If you opened it from another app, copy and paste the link into your normal browser instead; many apps use their own in-app browser.";
     const enc = new TextEncoder();
     const dec = new TextDecoder();
     const $ = (id) => document.getElementById(id);
@@ -312,6 +313,13 @@
       if (rawBytes.length !== PUBLIC_KEY_BYTES || rawBytes[0] !== 0x04) {
         throw new Error("Invalid lock box link.");
       }
+    }
+
+    function decryptErrorMessage(err) {
+      if (err?.message === "Invalid secret link." || err?.message === "Unsupported message format.") {
+        return err.message;
+      }
+      return DECRYPT_ERROR_HELP;
     }
 
     function openKeyDb() {
@@ -528,7 +536,7 @@
         show($("decryptedText"));
       } catch (err) {
         show($("decrypting"), false);
-        $("decryptError").textContent = err.message || "Could not open this secret link.";
+        $("decryptError").textContent = decryptErrorMessage(err);
         show($("decryptError"));
       }
     }
